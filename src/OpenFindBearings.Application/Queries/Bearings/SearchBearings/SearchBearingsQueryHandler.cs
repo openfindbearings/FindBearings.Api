@@ -22,11 +22,9 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
 
         public async Task<PagedResult<BearingDto>> Handle(SearchBearingsQuery request, CancellationToken cancellationToken)
         {
-            if (!HasAtLeastOneSearchCondition(request))
-            {
-                throw new InvalidOperationException("请至少提供一个搜索条件");
-            }
-
+            // 改动说明：移除"至少一个搜索条件"的强校验（原抛 InvalidOperationException → 被映射为 400）。
+            // 该接口是 public 搜索端点，无条件时应返回空/全量分页结果（与商家搜索移除同类校验保持一致），
+            // 而非 400，避免前端正常浏览被误判为请求非法。
             var searchParams = new BearingSearchParams
             {
                 PartNumber = request.PartNumber,
@@ -61,25 +59,6 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
                 Page = result.Page,
                 PageSize = result.PageSize
             };
-        }
-
-        private static bool HasAtLeastOneSearchCondition(SearchBearingsQuery request)
-        {
-            return !string.IsNullOrWhiteSpace(request.PartNumber)
-                || !string.IsNullOrWhiteSpace(request.OldNumber)
-                || !string.IsNullOrWhiteSpace(request.Keyword)
-                || request.MinInnerDiameter.HasValue
-                || request.MaxInnerDiameter.HasValue
-                || request.MinOuterDiameter.HasValue
-                || request.MaxOuterDiameter.HasValue
-                || request.MinWidth.HasValue
-                || request.MaxWidth.HasValue
-                || !string.IsNullOrWhiteSpace(request.OriginCountry)
-                || request.Category.HasValue
-                || request.BrandId.HasValue
-                || request.BearingTypeId.HasValue
-                || request.IsStandard.HasValue
-                || request.IncludeDeleted.HasValue;
         }
     }
 }

@@ -76,16 +76,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             var totalCount = await query.CountAsync(cancellationToken);
 
-            // 改动说明：原排序写死为"认证优先→名称"；现支持 SortBy（name 名称 / productcount 在售数 / 空=默认认证优先），
-            // 供移动端商家结果页排序。默认仍保持认证优先→名称，向后兼容。
+            // 改动说明：所有排序分支都以"已认证/入驻优先"为主排序（OrderByDescending(IsVerified)），
+            // 用户选的 名称/在售数 仅作次排序，保证入驻商家始终排在前面。
+            var desc = searchParams.SortOrder?.ToLower() == "desc";
             var ordered = (searchParams.SortBy?.ToLower()) switch
             {
-                "name" => searchParams.SortOrder?.ToLower() == "desc"
-                    ? query.OrderByDescending(m => m.Name)
-                    : query.OrderBy(m => m.Name),
-                "productcount" => searchParams.SortOrder?.ToLower() == "asc"
-                    ? query.OrderBy(m => m.ProductCount)
-                    : query.OrderByDescending(m => m.ProductCount),
+                "name" => desc
+                    ? query.OrderByDescending(m => m.IsVerified).ThenByDescending(m => m.Name)
+                    : query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.Name),
+                "productcount" => desc
+                    ? query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.ProductCount)
+                    : query.OrderByDescending(m => m.IsVerified).ThenByDescending(m => m.ProductCount),
                 _ => query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.Name)
             };
 

@@ -47,6 +47,16 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public bool? ExcludeCrawler { get; set; }
 
         /// <summary>
+        /// 排序字段（name=名称 / productcount=在售数 / 空=认证优先默认）
+        /// </summary>
+        public string? SortBy { get; set; }
+
+        /// <summary>
+        /// 排序方向（asc/desc）
+        /// </summary>
+        public string? SortOrder { get; set; }
+
+        /// <summary>
         /// 页码
         /// </summary>
         public int Page { get; set; } = 1;

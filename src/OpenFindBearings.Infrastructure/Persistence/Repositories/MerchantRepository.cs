@@ -76,9 +76,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var items = await query
-                .OrderByDescending(m => m.IsVerified)
-                .ThenBy(m => m.Name)
+            // 改动说明：原排序写死为"认证优先→名称"；现支持 SortBy（name 名称 / productcount 在售数 / 空=默认认证优先），
+            // 供移动端商家结果页排序。默认仍保持认证优先→名称，向后兼容。
+            var ordered = (searchParams.SortBy?.ToLower()) switch
+            {
+                "name" => searchParams.SortOrder?.ToLower() == "desc"
+                    ? query.OrderByDescending(m => m.Name)
+                    : query.OrderBy(m => m.Name),
+                "productcount" => searchParams.SortOrder?.ToLower() == "asc"
+                    ? query.OrderBy(m => m.ProductCount)
+                    : query.OrderByDescending(m => m.ProductCount),
+                _ => query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.Name)
+            };
+
+            var items = await ordered
                 .Skip((searchParams.Page - 1) * searchParams.PageSize)
                 .Take(searchParams.PageSize)
                 .ToListAsync(cancellationToken);

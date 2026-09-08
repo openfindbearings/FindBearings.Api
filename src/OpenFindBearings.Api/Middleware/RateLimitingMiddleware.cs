@@ -14,6 +14,8 @@ namespace OpenFindBearings.Api.Middleware
         private readonly RequestDelegate _next;
         private readonly ILogger<RateLimitingMiddleware> _logger;
         private readonly IServiceProvider _serviceProvider;
+        // 内部服务间调用令牌（配置 Internal:ApiToken）。非空时，携带匹配 X-Internal-Token 头的请求豁免用户级限流。
+        private readonly string? _internalToken;
 
         // 缓存限流配置，避免每次请求都查数据库
         private static Dictionary<string, int>? _cachedLimits;
@@ -54,11 +56,13 @@ namespace OpenFindBearings.Api.Middleware
         public RateLimitingMiddleware(
             RequestDelegate next,
             ILogger<RateLimitingMiddleware> logger,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IConfiguration configuration)
         {
             _next = next;
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _internalToken = configuration["Internal:ApiToken"];
         }
 
         public async Task InvokeAsync(HttpContext context, ICurrentUserService currentUser)
@@ -75,6 +79,17 @@ namespace OpenFindBearings.Api.Middleware
 
             // 同步接口白名单（机器间通信，不受用户级限流影响）
             if (path?.StartsWith("/api/sync/") == true)
+            {
+                await _next(context);
+                return;
+            }
+
+            // 内部服务间调用豁免：API 无公网 ingress，App 流量全部经 BFF 单一 Pod IP 转发，
+            // 按来源 IP 的 guest 限流会误伤聚合流量（正常浏览即触发 429）。BFF→API 携带匹配的
+            // X-Internal-Token 头时跳过用户级限流，边缘限流交由 nginx/BFF 承担。
+            if (!string.IsNullOrEmpty(_internalToken)
+                && context.Request.Headers.TryGetValue("X-Internal-Token", out var internalHeader)
+                && string.Equals(internalHeader.ToString(), _internalToken, StringComparison.Ordinal))
             {
                 await _next(context);
                 return;

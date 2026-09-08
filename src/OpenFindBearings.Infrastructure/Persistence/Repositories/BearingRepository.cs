@@ -53,12 +53,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             }
 
             // 关键词搜索
+            // 改动说明：原仅匹配 型号/旧代号/描述；新增匹配 类型名（BearingType 已反规范化在实体上）
+            // 与 品牌名（join Brand），使前端在轴承结果里直接搜品牌名/类型名（如 "ZWZ"、"深沟"）也能命中，
+            // 对齐主流目录类 App 的关键词搜索行为。
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
             {
                 query = query.Where(b =>
                     b.PartNumber.Contains(searchParams.Keyword) ||
                     (b.OldNumber != null && b.OldNumber.Contains(searchParams.Keyword)) ||
-                    (b.Description != null && b.Description.Contains(searchParams.Keyword)));
+                    (b.Description != null && b.Description.Contains(searchParams.Keyword)) ||
+                    b.BearingType.Contains(searchParams.Keyword) ||
+                    (b.Brand != null && b.Brand.Name.Contains(searchParams.Keyword)));
             }
 
             // 内径范围

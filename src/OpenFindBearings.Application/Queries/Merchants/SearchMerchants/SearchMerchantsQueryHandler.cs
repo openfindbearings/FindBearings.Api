@@ -34,6 +34,8 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 VerifiedOnly = request.VerifiedOnly,
                 ExcludeCrawler = request.ExcludeCrawler,
                 IsActive = request.IncludeDeleted == true ? null : true,
+                SortBy = request.SortBy,
+                SortOrder = request.SortOrder,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
